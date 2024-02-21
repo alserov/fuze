@@ -6,8 +6,10 @@ import (
 
 type Controller struct {
 	http.Handler
-	h Handler
-	//Group(base string) Handler
+	h struct {
+		Handler
+		Group
+	}
 
 	get    map[string]HandlerStruct
 	post   map[string]HandlerStruct
@@ -20,6 +22,10 @@ type Handler interface {
 	POST(path string, fn HandlerFunc, mw ...Middleware)
 	PUT(path string, fn HandlerFunc, mw ...Middleware)
 	DELETE(path string, fn HandlerFunc, mw ...Middleware)
+}
+
+type Group interface {
+	Group(base string) Handler
 }
 
 func NewController() *Controller {
@@ -36,6 +42,8 @@ func (c *Controller) GET(path string, fn HandlerFunc, mw ...Middleware) {
 		fn = mdlwr(fn)
 	}
 
+	removeFirstSlash(&path)
+
 	params, pathEls := transformPath(path)
 
 	c.get["/"+path] = HandlerStruct{
@@ -49,6 +57,8 @@ func (c *Controller) POST(path string, fn HandlerFunc, mw ...Middleware) {
 	for _, mdlwr := range mw {
 		fn = mdlwr(fn)
 	}
+
+	removeFirstSlash(&path)
 
 	params, pathEls := transformPath(path)
 
@@ -64,6 +74,8 @@ func (c *Controller) PUT(path string, fn HandlerFunc, mw ...Middleware) {
 		fn = mdlwr(fn)
 	}
 
+	removeFirstSlash(&path)
+
 	params, pathEls := transformPath(path)
 
 	c.put["/"+path] = HandlerStruct{
@@ -78,6 +90,8 @@ func (c *Controller) DELETE(path string, fn HandlerFunc, mw ...Middleware) {
 		fn = mdlwr(fn)
 	}
 
+	removeFirstSlash(&path)
+
 	params, pathEls := transformPath(path)
 
 	c.delete["/"+path] = HandlerStruct{
@@ -87,52 +101,85 @@ func (c *Controller) DELETE(path string, fn HandlerFunc, mw ...Middleware) {
 	}
 }
 
+func (c *Controller) Group(base string) Handler {
+	return &group{
+		c:    c,
+		base: base,
+	}
+}
+
+type group struct {
+	c    *Controller
+	base string
+}
+
+func (g *group) GET(path string, fn HandlerFunc, mw ...Middleware) {
+	for _, mdlwr := range mw {
+		fn = mdlwr(fn)
+	}
+
+	removeFirstSlash(&path)
+
+	params, pathEls := transformPath(g.base + "/" + path)
+
+	g.c.get[g.base+"/"+path] = HandlerStruct{
+		fn:             fn,
+		pathParameters: params,
+		pathElements:   pathEls,
+	}
+}
+
+func (g *group) POST(path string, fn HandlerFunc, mw ...Middleware) {
+	for _, mdlwr := range mw {
+		fn = mdlwr(fn)
+	}
+
+	params, pathEls := transformPath(path)
+
+	removeFirstSlash(&path)
+
+	g.c.post["/"+path] = HandlerStruct{
+		fn:             fn,
+		pathParameters: params,
+		pathElements:   pathEls,
+	}
+}
+
+func (g *group) PUT(path string, fn HandlerFunc, mw ...Middleware) {
+	for _, mdlwr := range mw {
+		fn = mdlwr(fn)
+	}
+
+	params, pathEls := transformPath(path)
+
+	removeFirstSlash(&path)
+
+	g.c.put["/"+path] = HandlerStruct{
+		fn:             fn,
+		pathParameters: params,
+		pathElements:   pathEls,
+	}
+}
+
+func (g *group) DELETE(path string, fn HandlerFunc, mw ...Middleware) {
+	for _, mdlwr := range mw {
+		fn = mdlwr(fn)
+	}
+
+	params, pathEls := transformPath(path)
+
+	removeFirstSlash(&path)
+
+	g.c.delete["/"+path] = HandlerStruct{
+		fn:             fn,
+		pathParameters: params,
+		pathElements:   pathEls,
+	}
+}
+
 func (c *Controller) getHandlersAmount() int {
 	return len(c.get) + len(c.put) + len(c.post) + len(c.delete)
 }
-
-//	func (r *router) Group(base string) Handler {
-//		return &handler{
-//			base: base,
-//		}
-//	}
-//
-//	type handler struct {
-//		router router
-//		base   string
-//	}
-//
-//	func (h *handler) GET(path string, fn http.HandlerFunc, mw ...Middleware) {
-//		for _, mdlwr := range mw {
-//			fn = mdlwr(fn).ServeHTTP
-//		}
-//
-//		h.router.get[h.base+"/"+path] = fn
-//	}
-//
-//	func (h *handler) POST(path string, fn http.HandlerFunc, mw ...Middleware) {
-//		for _, mdlwr := range mw {
-//			fn = mdlwr(fn).ServeHTTP
-//		}
-//
-//		h.router.post[h.base+"/"+path] = fn
-//	}
-//
-//	func (h *handler) PUT(path string, fn http.HandlerFunc, mw ...Middleware) {
-//		for _, mdlwr := range mw {
-//			fn = mdlwr(fn).ServeHTTP
-//		}
-//
-//		h.router.put[h.base+"/"+path] = fn
-//	}
-//
-//	func (h *handler) DELETE(path string, fn http.HandlerFunc, mw ...Middleware) {
-//		for _, mdlwr := range mw {
-//			fn = mdlwr(fn).ServeHTTP
-//		}
-//
-//		h.router.delete[h.base+"/"+path] = fn
-//	}
 
 type Ctx struct {
 	Request  *http.Request

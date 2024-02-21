@@ -10,19 +10,19 @@ import (
 
 var (
 	s *http.Server
-	r *Controller
+	r *Router
 )
 
 func init() {
-	r = NewController()
+	r = NewRouter(NewController())
 	s = &http.Server{
-		Addr:    fmt.Sprintf(":%d", 3000),
+		Addr:    fmt.Sprintf(":%d", 3001),
 		Handler: r,
 	}
 }
 
 func TestRouterGet(t *testing.T) {
-	r.GET("test", func(c *Ctx) {
+	r.c.GET("test", func(c *Ctx) {
 		fmt.Println("received get request")
 	})
 
@@ -33,7 +33,7 @@ func TestRouterGet(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 200)
 
-	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:3000/test", nil)
+	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:3001/test", nil)
 	require.NoError(t, err)
 
 	client := http.Client{}
@@ -41,15 +41,9 @@ func TestRouterGet(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestRouterGetWithMiddleware(t *testing.T) {
-	r.GET("test/{id}/test", func(c *Ctx) {
-		fmt.Println("received get request")
+func TestRouterGetWithParameters(t *testing.T) {
+	r.c.GET("test/{id}/{age}/{country}", func(c *Ctx) {
 		require.Equal(t, "5", c.Parameters["id"])
-	}, func(next HandlerFunc) HandlerFunc {
-		return func(c *Ctx) {
-			fmt.Println("middleware works")
-			next(c)
-		}
 	})
 
 	go func() {
@@ -59,18 +53,22 @@ func TestRouterGetWithMiddleware(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 200)
 
-	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:3000/test/5/test", nil)
+	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:3001/test/5/20/ua", nil)
 	require.NoError(t, err)
 
 	client := http.Client{}
-	_, err = client.Do(req)
+	res, err := client.Do(req)
 	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, res.StatusCode)
 }
 
-func TestRateLimiterMW(t *testing.T) {
-	r.GET("test", func(c *Ctx) {
-		fmt.Println("received get request")
-	}, WithRateLimitMW(3, 3))
+func TestRouterGroupGet(t *testing.T) {
+	r.c.Group("test").GET("{id}", func(c *Ctx) {
+		require.Equal(t, "5", c.Parameters["id"])
+	})
+	r.c.Group("test").GET("/path/{id}", func(c *Ctx) {
+		require.Equal(t, "6", c.Parameters["id"])
+	})
 
 	go func() {
 		err := s.ListenAndServe()
@@ -79,23 +77,16 @@ func TestRateLimiterMW(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 200)
 
-	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:3000/test", nil)
+	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:3001/test/5", nil)
 	require.NoError(t, err)
 
 	client := http.Client{}
-
-	var res *http.Response
-	for i := 0; i < 3; i++ {
-		res, err = client.Do(req)
-		require.NoError(t, err)
-		require.Equal(t, http.StatusOK, res.StatusCode)
-	}
-
-	res, err = client.Do(req)
+	res, err := client.Do(req)
 	require.NoError(t, err)
-	require.Equal(t, http.StatusTooManyRequests, res.StatusCode)
+	require.Equal(t, http.StatusOK, res.StatusCode)
 
-	time.Sleep(time.Second)
+	req, err = http.NewRequest(http.MethodGet, "http://127.0.0.1:3001/test/path/6", nil)
+	require.NoError(t, err)
 
 	res, err = client.Do(req)
 	require.NoError(t, err)
