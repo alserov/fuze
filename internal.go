@@ -73,6 +73,7 @@ func transformPath(path string) (map[int]string, []string) {
 				res[i+removed] = s[i][1 : len(s[i])-1]
 				s = append(s[:i], s[i+1:]...)
 				removed++
+				i--
 			}
 		}
 	}

@@ -31,6 +31,12 @@ func TestGetParameters(t *testing.T) {
 			expectParams:  map[int]string{0: "id"},
 			expectPathEls: []string{},
 		},
+		{
+			name:          "all parameters",
+			path:          "/{id}/{age}/{country}",
+			expectParams:  map[int]string{0: "id", 1: "age", 2: "country"},
+			expectPathEls: []string{},
+		},
 	}
 
 	for _, tc := range tests {
