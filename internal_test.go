@@ -85,7 +85,7 @@ func TestParseQueryParameter(t *testing.T) {
 	}
 }
 
-func TestLikePath(t *testing.T) {
+func TestFindLikePath(t *testing.T) {
 	tests := []struct {
 		name       string
 		path       string

@@ -28,32 +28,58 @@ func findLikePath(path string, handlers map[string]HandlerStruct) (HandlerStruct
 
 	pathEls := strings.Split(path, "/")
 
+	chDone := make(chan struct{}, len(handlers))
+	chFound := make(chan struct {
+		h HandlerStruct
+		p Parameters
+	}, 1)
+	defer func() {
+		close(chFound)
+		close(chDone)
+	}()
+
 	for _, h := range handlers {
-		if len(h.pathParameters) < 1 {
-			continue
-		}
-
-		if len(pathEls)-len(h.pathElements) != len(h.pathParameters) {
-			return HandlerStruct{}, nil, false
-		}
-
-		exists := true
-		for _, pathEl := range h.pathElements {
-			if !strings.Contains(path, pathEl) {
-				exists = false
-				break
+		go func(h HandlerStruct) {
+			if len(h.pathParameters) < 1 {
+				chDone <- struct{}{}
+				return
 			}
-		}
-		if !exists {
-			return HandlerStruct{}, nil, false
-		}
 
-		p := parseQueryParameter(&url.URL{Path: path}, h.pathParameters)
+			if len(pathEls)-len(h.pathElements) != len(h.pathParameters) {
+				chDone <- struct{}{}
+				return
+			}
 
-		return h, p, true
+			for _, pathEl := range h.pathElements {
+				if !strings.Contains(path, pathEl) {
+					chDone <- struct{}{}
+					return
+				}
+			}
+
+			p := parseQueryParameter(&url.URL{Path: path}, h.pathParameters)
+
+			chFound <- struct {
+				h HandlerStruct
+				p Parameters
+			}{h: h, p: p}
+
+			return
+		}(h)
 	}
 
-	return HandlerStruct{}, nil, false
+	doneCounter := 0
+	for {
+		select {
+		case f := <-chFound:
+			return f.h, f.p, true
+		case <-chDone:
+			doneCounter++
+			if doneCounter == len(handlers) {
+				return HandlerStruct{}, nil, false
+			}
+		}
+	}
 }
 
 func transformPath(path string) (map[int]string, []string) {
