@@ -20,3 +20,20 @@ func WithRateLimitMW(lim int, burst int) Middleware {
 		}
 	}
 }
+
+// WithCookies
+// checks if all the required cookies present
+// names are names of cookies that must be in request
+func WithCookies(names ...string) Middleware {
+	return func(next HandlerFunc) HandlerFunc {
+		return func(c *Ctx) {
+			for _, n := range names {
+				if _, err := c.Request.Cookie(n); err != nil {
+					c.Response.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+			}
+			next(c)
+		}
+	}
+}
