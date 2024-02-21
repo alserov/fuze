@@ -101,6 +101,9 @@ func TestFindLikePath(t *testing.T) {
 					1: "number",
 					3: "flatNumber",
 				},
+			}, "/home/{number}": {
+				pathElements:   []string{"home"},
+				pathParameters: map[int]string{1: "number"},
 			}},
 			pathExists: true,
 		},
@@ -150,4 +153,77 @@ func TestFindLikePath(t *testing.T) {
 			}
 		})
 	}
+}
+
+func BenchmarkFindLikePath(b *testing.B) {
+	tests := []struct {
+		name       string
+		path       string
+		paths      map[string]HandlerStruct
+		pathExists bool
+	}{
+		{
+			name: "default path",
+			path: "/home/77/flat/7",
+			paths: map[string]HandlerStruct{"/home/{number}/flat/{flatNumber}": {
+				pathElements: []string{"home", "flat"},
+				pathParameters: map[int]string{
+					1: "number",
+					3: "flatNumber",
+				},
+			}},
+			pathExists: true,
+		},
+		{
+			name: "one redundant element in the path",
+			path: "/home/77/flat/7/floor",
+			paths: map[string]HandlerStruct{"/home/{number}/flat/{flatNumber}": {
+				pathElements: []string{"home", "flat"},
+				pathParameters: map[int]string{
+					1: "number",
+					3: "flatNumber",
+				},
+			}},
+			pathExists: false,
+		},
+		{
+			name: "the same path without parameters",
+			path: "/home/flat/floor",
+			paths: map[string]HandlerStruct{"/home/{number}/flat/{flatNumber}": {
+				pathElements: []string{"home", "flat"},
+				pathParameters: map[int]string{
+					1: "number",
+					3: "flatNumber",
+				},
+			}},
+			pathExists: false,
+		},
+		{
+			name: "short with parameter",
+			path: "/5",
+			paths: map[string]HandlerStruct{"/{id}": {
+				pathElements: []string{},
+				pathParameters: map[int]string{
+					0: "id",
+				},
+			}},
+			pathExists: true,
+		},
+	}
+
+	b.ResetTimer()
+	for _, tc := range tests {
+		b.Run(tc.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				findLikePath(tc.path, tc.paths)
+			}
+		})
+	}
+}
+
+func TestRemoveFirstSlash(t *testing.T) {
+	path := "/path/123"
+	removeFirstSlash(&path)
+
+	require.Equal(t, "path/123", path)
 }
