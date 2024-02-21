@@ -7,6 +7,10 @@
 
 --------
 
+```sh
+go get github.com/alserov/fuze
+```
+
 # Examples
 
 ## Default server template
