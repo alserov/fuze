@@ -63,10 +63,12 @@ func TestRouterGetWithParameters(t *testing.T) {
 }
 
 func TestRouterGroupGet(t *testing.T) {
-	r.c.Group("test").GET("{id}", func(c *Ctx) {
+	gr := r.c.Group("test")
+
+	gr.GET("{id}", func(c *Ctx) {
 		require.Equal(t, "5", c.Parameters["id"])
 	})
-	r.c.Group("test").GET("/path/{id}", func(c *Ctx) {
+	gr.GET("/path/{id}", func(c *Ctx) {
 		require.Equal(t, "6", c.Parameters["id"])
 	})
 
