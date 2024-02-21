@@ -12,7 +12,7 @@ import (
 func TestApp(t *testing.T) {
 	a := NewApp()
 
-	a.Controller.GET("/path/{id}", func(c *Ctx) {
+	a.GET("/path/{id}", func(c *Ctx) {
 		fmt.Println(c.Parameters)
 	})
 
@@ -27,6 +27,7 @@ func TestApp(t *testing.T) {
 	require.NoError(t, err)
 
 	cl := &http.Client{}
+
 	res, err := cl.Do(req)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, res.StatusCode)

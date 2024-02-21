@@ -10,8 +10,7 @@ import (
 
 type App struct {
 	s *http.Server
-
-	Controller *Controller
+	*Controller
 }
 
 const (
@@ -48,7 +47,7 @@ func NewApp(opts ...Opt) *App {
 }
 
 func (a *App) Run() error {
-	fmt.Printf("App started \nAddr: %s \nHandlers: %d \n", a.s.Addr, a.Controller.getHandlersAmount())
+	fmt.Printf("App started \nAddr: %s \nHandlers: %d \n", a.s.Addr, a.getHandlersAmount())
 	if err := a.s.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("failed to listen: %w", err)
 	}
