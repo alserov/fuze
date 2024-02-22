@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/require"
+	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -39,8 +40,9 @@ func TestRouterGet(t *testing.T) {
 	require.NoError(t, err)
 
 	client := http.Client{}
-	_, err = client.Do(req)
+	res, err := client.Do(req)
 	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, res.StatusCode)
 }
 
 func TestRouterGetWithParameters(t *testing.T) {
@@ -139,4 +141,57 @@ func TestRouterPost(t *testing.T) {
 	res, err := client.Do(req)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, res.StatusCode)
+}
+
+func TestResponse(t *testing.T) {
+	r.c.POST("/test/new", func(c *Ctx) {
+		var req struct {
+			Name string
+		}
+		err := c.Decode(&req)
+		require.NoError(t, err)
+
+		require.Equal(t, "andrew", req.Name)
+
+		err = c.SendValue(struct {
+			Result string
+		}{Result: "ok"}, http.StatusCreated)
+		require.NoError(t, err)
+	})
+
+	go func() {
+		err := s.ListenAndServe()
+		require.NoError(t, err)
+	}()
+
+	time.Sleep(time.Millisecond * 200)
+
+	body, err := json.Marshal(struct {
+		Name string
+	}{
+		Name: "andrew",
+	})
+
+	req, err := http.NewRequest(http.MethodPost, "http://127.0.0.1:3001/test/new", bytes.NewReader(body))
+	require.NoError(t, err)
+
+	client := http.Client{}
+
+	res, err := client.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusCreated, res.StatusCode)
+
+	resJSON, err := io.ReadAll(res.Body)
+	require.NoError(t, err)
+
+	var resBody struct {
+		Result string
+	}
+	require.NoError(t, json.Unmarshal(resJSON, &resBody))
+
+	require.Equal(t, struct {
+		Result string
+	}{
+		Result: "ok",
+	}, resBody)
 }
