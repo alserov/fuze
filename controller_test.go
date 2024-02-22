@@ -1,6 +1,8 @@
 package fuze
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/require"
 	"net/http"
@@ -91,6 +93,50 @@ func TestRouterGroupGet(t *testing.T) {
 	require.NoError(t, err)
 
 	res, err = client.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, res.StatusCode)
+}
+
+func TestRouterPost(t *testing.T) {
+	r.c.POST("test/{name}", func(c *Ctx) {
+		require.Equal(t, "user", c.Parameters["name"])
+
+		var req struct {
+			Integer int
+			String  string
+			Boolean bool
+		}
+		err := c.Decode(&req)
+		require.NoError(t, err)
+
+		require.Equal(t, req.Integer, 1)
+		require.Equal(t, req.String, "a")
+		require.Equal(t, req.Boolean, true)
+	})
+
+	go func() {
+		err := s.ListenAndServe()
+		require.NoError(t, err)
+	}()
+
+	time.Sleep(time.Millisecond * 200)
+
+	body, err := json.Marshal(struct {
+		Integer int
+		String  string
+		Boolean bool
+	}{
+		Integer: 1,
+		String:  "a",
+		Boolean: true,
+	})
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPost, "http://127.0.0.1:3001/test/user", bytes.NewReader(body))
+	require.NoError(t, err)
+
+	client := http.Client{}
+	res, err := client.Do(req)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, res.StatusCode)
 }

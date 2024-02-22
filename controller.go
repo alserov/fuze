@@ -1,6 +1,9 @@
 package fuze
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 )
 
@@ -190,6 +193,39 @@ type Ctx struct {
 
 	// ID is being created automatically, is uuid
 	ID string
+}
+
+// Decode Decodes request body
+func (c *Ctx) Decode(target any) error {
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		return fmt.Errorf("failed to req request body: %w", err)
+	}
+
+	if err = json.Unmarshal(body, &target); err != nil {
+		return fmt.Errorf("failed to decode request body: %w", err)
+	}
+	return nil
+}
+
+// SendValue Sends value with http status
+func (c *Ctx) SendValue(val any, status int) error {
+	b, err := json.Marshal(val)
+	if err != nil {
+		return fmt.Errorf("failed to marshal value: %w", err)
+	}
+
+	c.Response.WriteHeader(status)
+	if _, err = c.Response.Write(b); err != nil {
+		return fmt.Errorf("failed to send response: %w", err)
+	}
+
+	return nil
+}
+
+// SendStatus Sends http status
+func (c *Ctx) SendStatus(status int) {
+	c.Response.WriteHeader(status)
 }
 
 type Parameters map[string]string

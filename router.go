@@ -37,7 +37,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		h, ok := r.c.post[path]
 		if !ok {
 			var p Parameters
-			if h, p, ok = findLikePath(path, r.c.get); ok {
+			if h, p, ok = findLikePath(path, r.c.post); ok {
 				h.fn(transformToCtx(w, req, p))
 				return
 			}
