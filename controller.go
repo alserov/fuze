@@ -165,6 +165,22 @@ func (g *group) PUT(path string, fn HandlerFunc, mw ...Middleware) {
 	}
 }
 
+func (g *group) PATCH(path string, fn HandlerFunc, mw ...Middleware) {
+	for _, mdlwr := range mw {
+		fn = mdlwr(fn)
+	}
+
+	params, pathEls := transformPath(path)
+
+	removeFirstSlash(&path)
+
+	g.c.patch["/"+path] = HandlerStruct{
+		fn:             fn,
+		pathParameters: params,
+		pathElements:   pathEls,
+	}
+}
+
 func (g *group) DELETE(path string, fn HandlerFunc, mw ...Middleware) {
 	for _, mdlwr := range mw {
 		fn = mdlwr(fn)
