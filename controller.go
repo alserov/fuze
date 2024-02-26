@@ -18,6 +18,7 @@ type Controller struct {
 	post   map[string]HandlerStruct
 	delete map[string]HandlerStruct
 	put    map[string]HandlerStruct
+	patch  map[string]HandlerStruct
 }
 
 type Handler interface {
