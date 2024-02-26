@@ -1,39 +1,68 @@
 package fuze
 
 import (
-	"errors"
-	"fmt"
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"testing"
-	"time"
 )
 
-func TestApp(t *testing.T) {
-	a := NewApp()
+var (
+	a *App
+)
 
-	a.GET("/path/{id}", func(c *Ctx) {
-		fmt.Println(c.Parameters)
-	})
+func init() {
+	a = NewApp()
+
+	a.GET("/path/{id}", func(c *Ctx) {})
+	a.POST("/path/{id}", func(c *Ctx) {})
+	a.DELETE("/path/{id}", func(c *Ctx) {})
 
 	go func() {
 		err := a.Run()
-		if !errors.Is(err, http.ErrServerClosed) {
-			require.NoError(t, err)
+		if err != nil {
+			panic(err)
 		}
 	}()
+}
 
+func BenchmarkController_GET(b *testing.B) {
 	req, err := http.NewRequest(http.MethodGet, "http://localhost:3000/path/10", nil)
-	require.NoError(t, err)
+	require.NoError(b, err)
 
 	cl := &http.Client{}
 
-	res, err := cl.Do(req)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, res.StatusCode)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		res, err := cl.Do(req)
+		require.NoError(b, err)
+		require.Equal(b, http.StatusOK, res.StatusCode)
+	}
+}
 
-	time.Sleep(time.Second)
+func BenchmarkController_POST(b *testing.B) {
+	req, err := http.NewRequest(http.MethodPost, "http://localhost:3000/path/10", nil)
+	require.NoError(b, err)
 
-	err = a.GracefulShutdown()
-	require.NoError(t, err)
+	cl := &http.Client{}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		res, err := cl.Do(req)
+		require.NoError(b, err)
+		require.Equal(b, http.StatusOK, res.StatusCode)
+	}
+}
+
+func BenchmarkController_DELETE(b *testing.B) {
+	req, err := http.NewRequest(http.MethodDelete, "http://localhost:3000/path/10", nil)
+	require.NoError(b, err)
+
+	cl := &http.Client{}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		res, err := cl.Do(req)
+		require.NoError(b, err)
+		require.Equal(b, http.StatusOK, res.StatusCode)
+	}
 }
